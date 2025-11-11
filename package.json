@@ -1,0 +1,27 @@
+{
+  "name": "zumgeo",
+  "version": "1.0.0",
+  "description": "A flag guessing game",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc && tailwindcss -i ./src/input.css -o ./public/styles.css",
+    "start": "node dist/server.js",
+    "dev": "tsc --watch & tailwindcss -i ./src/input.css -o ./public/styles.css --watch",
+    "run": "npm run build && npm start"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "tailwindcss": "^3.4.0"
+  }
+}
+
