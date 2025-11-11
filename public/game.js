@@ -5,6 +5,7 @@ let wrongGuessCount = 0;
 let gameWon = false;
 let capitalGuessingActive = false;
 let capitalGuesses = [];
+let validCountryNames = []; // Store valid country names for validation
 
 // DOM elements
 const flagImage = document.getElementById('flag-image');
@@ -22,11 +23,64 @@ const capitalGuessButton = document.getElementById('capital-guess-button');
 const capitalPlaceholder = document.getElementById('capital-placeholder');
 const capitalLength = document.getElementById('capital-length');
 const capitalGuessesList = document.getElementById('capital-guesses-list');
+const continentFilter = document.getElementById('continent-filter');
+const countrySuggestions = document.getElementById('country-suggestions');
+
+// Get continent from URL parameter or use default
+function getContinentFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    const continent = params.get('continent');
+    return continent || 'All';
+}
+
+// Update URL with continent parameter
+function updateURLWithContinent(continent) {
+    const url = new URL(window.location);
+    if (continent === 'All') {
+        url.searchParams.delete('continent');
+    } else {
+        url.searchParams.set('continent', continent);
+    }
+    window.history.replaceState({}, '', url);
+}
+
+// Load country suggestions based on selected continent
+async function loadCountrySuggestions() {
+    try {
+        const selectedContinent = continentFilter.value;
+        const url = selectedContinent === 'All'
+            ? '/api/countries'
+            : `/api/countries?continent=${encodeURIComponent(selectedContinent)}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        // Store valid country names for validation (case-insensitive)
+        validCountryNames = data.countries.map(name => name.toLowerCase());
+
+        // Clear existing options
+        countrySuggestions.innerHTML = '';
+
+        // Add country names as options
+        data.countries.forEach(countryName => {
+            const option = document.createElement('option');
+            option.value = countryName;
+            countrySuggestions.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading country suggestions:', error);
+    }
+}
 
 // Initialize game
 async function initGame() {
     try {
-        const response = await fetch('/api/flag');
+        const selectedContinent = continentFilter.value;
+        const url = selectedContinent === 'All'
+            ? '/api/flag'
+            : `/api/flag?continent=${encodeURIComponent(selectedContinent)}`;
+
+        const response = await fetch(url);
         currentCountry = await response.json();
 
         // Reset game state
@@ -337,6 +391,16 @@ async function submitGuess() {
     const guess = guessInput.value.trim();
     if (!guess) return;
 
+    // Validate that the guess is in the valid country list
+    const normalizedGuess = guess.toLowerCase();
+    if (!validCountryNames.includes(normalizedGuess)) {
+        statusMessage.textContent = `"${guess}" is not a valid country name. Please select from the suggestions.`;
+        statusMessage.className = 'text-red-600';
+        guessInput.value = '';
+        guessInput.focus();
+        return;
+    }
+
     guessCount++;
     updateGuessCount();
 
@@ -570,9 +634,25 @@ function submitCapitalGuess() {
 // Event listeners
 guessButton.addEventListener('click', submitGuess);
 newGameButton.addEventListener('click', () => {
-    window.location.reload();
+    // Preserve continent selection when starting new game
+    const selectedContinent = continentFilter.value;
+    const url = new URL(window.location);
+    if (selectedContinent === 'All') {
+        url.searchParams.delete('continent');
+    } else {
+        url.searchParams.set('continent', selectedContinent);
+    }
+    window.location.href = url.toString();
 });
 capitalGuessButton.addEventListener('click', submitCapitalGuess);
+continentFilter.addEventListener('change', () => {
+    // Update URL with new continent selection
+    updateURLWithContinent(continentFilter.value);
+    // Reload country suggestions for the new continent
+    loadCountrySuggestions();
+    // When continent changes, start a new game with the new filter
+    initGame();
+});
 
 guessInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
@@ -586,6 +666,12 @@ capitalInput.addEventListener('keypress', (e) => {
     }
 });
 
-// Initialize game on load
-initGame();
+// Initialize continent filter from URL on page load
+const initialContinent = getContinentFromURL();
+continentFilter.value = initialContinent;
+
+// Load country suggestions and initialize game on load
+loadCountrySuggestions().then(() => {
+    initGame();
+});
 

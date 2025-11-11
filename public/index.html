@@ -42,12 +42,29 @@
                 <p id="status-message" class="text-lg font-semibold text-gray-700"></p>
             </div>
 
+            <!-- Continent Filter -->
+            <div class="mb-4">
+                <label for="continent-filter" class="block text-sm font-semibold text-gray-700 mb-2">Filter by
+                    Continent:</label>
+                <select id="continent-filter"
+                    class="w-full md:w-auto px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-lg bg-white">
+                    <option value="All">All Continents</option>
+                    <option value="Africa">Africa</option>
+                    <option value="Asia">Asia</option>
+                    <option value="Europe">Europe</option>
+                    <option value="North America">North America</option>
+                    <option value="South America">South America</option>
+                    <option value="Oceania">Oceania</option>
+                </select>
+            </div>
+
             <!-- Input Section -->
             <div class="mb-6">
                 <div class="flex flex-col md:flex-row gap-3">
                     <input type="text" id="guess-input" placeholder="Enter country name..."
                         class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-lg"
-                        autocomplete="off">
+                        autocomplete="off" list="country-suggestions">
+                    <datalist id="country-suggestions"></datalist>
                     <button id="guess-button"
                         class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200 shadow-lg">
                         Guess
