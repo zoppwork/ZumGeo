@@ -3,6 +3,8 @@ let currentCountry = null;
 let guessCount = 0;
 let wrongGuessCount = 0;
 let gameWon = false;
+let capitalGuessingActive = false;
+let capitalGuesses = [];
 
 // DOM elements
 const flagImage = document.getElementById('flag-image');
@@ -14,6 +16,12 @@ const guessCountDisplay = document.getElementById('guess-count');
 const revealInfo = document.getElementById('reveal-info');
 const guessesList = document.getElementById('guesses-list');
 const percentagesList = document.getElementById('percentages-list');
+const capitalGuessing = document.getElementById('capital-guessing');
+const capitalInput = document.getElementById('capital-input');
+const capitalGuessButton = document.getElementById('capital-guess-button');
+const capitalPlaceholder = document.getElementById('capital-placeholder');
+const capitalLength = document.getElementById('capital-length');
+const capitalGuessesList = document.getElementById('capital-guesses-list');
 
 // Initialize game
 async function initGame() {
@@ -25,6 +33,8 @@ async function initGame() {
         guessCount = 0;
         wrongGuessCount = 0;
         gameWon = false;
+        capitalGuessingActive = false;
+        capitalGuesses = [];
 
         // Reset UI
         flagImage.classList.add('hidden');
@@ -34,6 +44,10 @@ async function initGame() {
         guessInput.value = '';
         guessInput.disabled = false;
         guessButton.disabled = false;
+        capitalGuessing.classList.add('hidden');
+        capitalInput.value = '';
+        capitalGuessesList.innerHTML = '';
+        capitalPlaceholder.innerHTML = '';
         updateGuessCount();
         updateRevealInfo();
 
@@ -357,6 +371,9 @@ async function submitGuess() {
             // Show full flag
             flagImage.classList.remove('hidden');
             flagImage.style.filter = 'none';
+
+            // Start capital city guessing
+            startCapitalGuessing();
         } else {
             wrongGuessCount++;
             statusMessage.textContent = '❌ Wrong guess! Try again.';
@@ -377,13 +394,195 @@ async function submitGuess() {
     }
 }
 
+// Start capital city guessing (Wordle-style)
+function startCapitalGuessing() {
+    capitalGuessingActive = true;
+    capitalGuesses = [];
+    const capital = currentCountry.capital;
+
+    // Show capital guessing section
+    capitalGuessing.classList.remove('hidden');
+
+    // Show placeholder with underscores
+    capitalLength.textContent = capital.replace(/[^a-zA-Z]/g, '').length;
+    capitalPlaceholder.innerHTML = '';
+    const letters = capital.split('');
+    letters.forEach((char, index) => {
+        const charBox = document.createElement('div');
+        if (/[a-zA-Z]/.test(char)) {
+            charBox.className = 'w-10 h-10 border-2 border-gray-400 rounded flex items-center justify-center text-xl font-bold text-gray-400';
+            charBox.textContent = '_';
+        } else {
+            charBox.className = 'w-10 h-10 flex items-center justify-center text-xl font-bold text-gray-600';
+            charBox.textContent = char;
+        }
+        capitalPlaceholder.appendChild(charBox);
+    });
+
+    // Focus on capital input
+    capitalInput.focus();
+}
+
+// Submit capital guess
+function submitCapitalGuess() {
+    if (!capitalGuessingActive || !currentCountry) return;
+
+    const guess = capitalInput.value.trim();
+    if (!guess) return;
+
+    const capital = currentCountry.capital;
+    const normalizedCapital = capital.toLowerCase().replace(/[^a-z]/g, '');
+    const normalizedGuess = guess.toLowerCase().replace(/[^a-z]/g, '');
+
+    // Check if guess letter count matches (ignoring spaces/punctuation)
+    if (normalizedGuess.length !== normalizedCapital.length) {
+        statusMessage.textContent = `Capital city has ${normalizedCapital.length} letters. Try again!`;
+        statusMessage.className = 'text-yellow-600';
+        capitalInput.value = '';
+        return;
+    }
+
+    capitalGuesses.push(guess);
+
+    // Create Wordle-style display
+    const guessRow = document.createElement('div');
+    guessRow.className = 'flex gap-2 justify-center items-center mb-2';
+
+    const capitalLetters = capital.split('');
+    const guessLetters = guess.split('');
+
+    // Count letters in capital (excluding spaces/punctuation)
+    let capitalLetterCounts = {};
+    capitalLetters.forEach((char) => {
+        const lowerChar = char.toLowerCase();
+        if (/[a-z]/.test(lowerChar)) {
+            capitalLetterCounts[lowerChar] = (capitalLetterCounts[lowerChar] || 0) + 1;
+        }
+    });
+
+    // Create a copy for tracking remaining letters (for yellow marking)
+    const remainingLetters = { ...capitalLetterCounts };
+
+    // Initialize result array
+    const result = [];
+
+    // First pass: mark correct positions (green) and decrement counts
+    for (let i = 0; i < capitalLetters.length; i++) {
+        const capitalChar = capitalLetters[i];
+        const guessChar = guessLetters[i] || '';
+        const capitalLower = capitalChar.toLowerCase();
+        const guessLower = guessChar.toLowerCase();
+
+        if (!/[a-zA-Z]/.test(capitalChar)) {
+            // Non-letter in capital (space, punctuation) - show as-is
+            result.push({ char: capitalChar, status: 'punctuation', index: i });
+        } else if (guessLower === capitalLower) {
+            // Correct letter in correct position - GREEN
+            remainingLetters[capitalLower]--;
+            result.push({ char: guessChar, status: 'correct', index: i });
+        } else {
+            // Letter doesn't match at this position - check later for yellow
+            result.push({ char: guessChar, status: 'unknown', index: i, capitalChar: capitalLower });
+        }
+    }
+
+    // Second pass: mark wrong positions (yellow) and not in word (gray)
+    result.forEach((item) => {
+        if (item.status === 'correct' || item.status === 'punctuation') return;
+
+        const guessLower = item.char.toLowerCase();
+
+        if (!/[a-z]/.test(guessLower) || !item.char) {
+            // Non-letter character or empty
+            item.status = 'not-in-word';
+        } else if (remainingLetters[guessLower] > 0) {
+            // Letter exists in capital but wrong position - YELLOW
+            remainingLetters[guessLower]--;
+            item.status = 'wrong-position';
+        } else {
+            // Letter not in word - GRAY
+            item.status = 'not-in-word';
+        }
+    });
+
+    // Display the guess with colors
+    result.forEach((item) => {
+        const charBox = document.createElement('div');
+        charBox.className = 'w-10 h-10 border-2 rounded flex items-center justify-center text-xl font-bold border-gray-300';
+
+        if (item.status === 'correct') {
+            // Green: correct letter in correct position
+            charBox.style.color = '#16a34a'; // green-600
+            charBox.style.setProperty('color', '#16a34a', 'important');
+            charBox.textContent = item.char.toUpperCase();
+        } else if (item.status === 'wrong-position') {
+            // Yellow: letter exists but wrong position
+            charBox.style.color = '#ca8a04'; // yellow-600
+            charBox.style.setProperty('color', '#ca8a04', 'important');
+            charBox.textContent = item.char.toUpperCase();
+        } else if (item.status === 'punctuation') {
+            // No color: spaces and punctuation
+            charBox.className = 'w-10 h-10 flex items-center justify-center text-xl font-bold border-transparent';
+            charBox.style.color = '#4b5563'; // gray-600
+            charBox.textContent = item.char;
+        } else {
+            // Default: letter not in word
+            charBox.style.color = '#4b5563'; // gray-600
+            charBox.style.setProperty('color', '#4b5563', 'important');
+            charBox.textContent = item.char ? item.char.toUpperCase() : '';
+        }
+
+        guessRow.appendChild(charBox);
+    });
+
+    capitalGuessesList.appendChild(guessRow);
+
+    // Check if correct
+    if (normalizedGuess === normalizedCapital) {
+        capitalGuessingActive = false;
+        statusMessage.textContent = `🎉 Perfect! The capital is ${capital}!`;
+        statusMessage.className = 'text-green-600';
+        capitalInput.disabled = true;
+        capitalGuessButton.disabled = true;
+
+        // Update placeholder to show correct answer
+        capitalPlaceholder.innerHTML = '';
+        capitalLetters.forEach((char) => {
+            const charBox = document.createElement('div');
+            if (/[a-zA-Z]/.test(char)) {
+                charBox.className = 'w-10 h-10 border-2 border-green-600 bg-green-500 rounded flex items-center justify-center text-xl font-bold text-white';
+                charBox.textContent = char.toUpperCase();
+            } else {
+                charBox.className = 'w-10 h-10 flex items-center justify-center text-xl font-bold text-gray-600';
+                charBox.textContent = char;
+            }
+            capitalPlaceholder.appendChild(charBox);
+        });
+    } else {
+        statusMessage.textContent = 'Keep guessing the capital city!';
+        statusMessage.className = 'text-blue-600';
+    }
+
+    capitalInput.value = '';
+    capitalInput.focus();
+}
+
 // Event listeners
 guessButton.addEventListener('click', submitGuess);
-newGameButton.addEventListener('click', initGame);
+newGameButton.addEventListener('click', () => {
+    window.location.reload();
+});
+capitalGuessButton.addEventListener('click', submitCapitalGuess);
 
 guessInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
         submitGuess();
+    }
+});
+
+capitalInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        submitCapitalGuess();
     }
 });
 

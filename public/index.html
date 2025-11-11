@@ -64,6 +64,26 @@
                 <h3 class="text-lg font-semibold text-gray-700 mb-3">Previous Guesses:</h3>
                 <div id="guesses-list" class="space-y-2"></div>
             </div>
+
+            <!-- Capital City Guessing (Wordle-style) -->
+            <div id="capital-guessing" class="mt-6 hidden">
+                <h3 class="text-lg font-semibold text-gray-700 mb-3">Now guess the capital city!</h3>
+                <div id="capital-hint" class="mb-4 text-center">
+                    <p class="text-sm text-gray-600 mb-2">Capital city has <span id="capital-length"
+                            class="font-bold">0</span> letters:</p>
+                    <div id="capital-placeholder" class="flex gap-2 justify-center items-center mb-4"></div>
+                </div>
+                <div class="flex flex-col md:flex-row gap-3 mb-4">
+                    <input type="text" id="capital-input" placeholder="Enter capital city..."
+                        class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-lg"
+                        autocomplete="off">
+                    <button id="capital-guess-button"
+                        class="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors duration-200 shadow-lg">
+                        Guess Capital
+                    </button>
+                </div>
+                <div id="capital-guesses-list" class="space-y-2"></div>
+            </div>
         </div>
 
         <!-- Instructions -->

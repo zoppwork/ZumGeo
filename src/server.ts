@@ -14,11 +14,12 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.get('/api/flag', (req, res) => {
   const randomIndex = Math.floor(Math.random() * countries.length);
   const country = countries[randomIndex];
-  
+
   res.json({
     name: country.name,
     flagUrl: country.flagUrl,
-    colors: country.colors
+    colors: country.colors,
+    capital: country.capital
   });
 });
 
@@ -27,9 +28,9 @@ app.post('/api/guess', (req, res) => {
   const { countryName, guess } = req.body;
   const normalizedGuess = guess.trim().toLowerCase();
   const normalizedCountry = countryName.toLowerCase();
-  
+
   const isCorrect = normalizedGuess === normalizedCountry;
-  
+
   res.json({ correct: isCorrect });
 });
 
